@@ -1,0 +1,77 @@
+.nim-docx-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--nim-bg-secondary, #f4f4f5);
+  color: var(--nim-text, #18181b);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.nim-docx-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  flex-shrink: 0;
+  background: var(--nim-toolbar-bg, var(--nim-bg, #ffffff));
+  border-bottom: 1px solid var(--nim-toolbar-border, var(--nim-border, #e4e4e7));
+}
+
+.nim-docx-toolbar-spacer { flex: 1 1 auto; }
+.nim-docx-zoomgroup { display: flex; align-items: center; gap: 4px; }
+
+.nim-docx-btn {
+  appearance: none;
+  border: 1px solid var(--nim-border, #d4d4d8);
+  background: var(--nim-bg-tertiary, #e4e4e7);
+  color: var(--nim-text, #18181b);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  min-width: 32px;
+  transition: background 0.12s ease, opacity 0.12s ease;
+}
+.nim-docx-btn:hover:not(:disabled) { background: var(--nim-bg-hover, #d4d4d8); }
+.nim-docx-btn:disabled { opacity: 0.45; cursor: default; }
+.nim-docx-btn.is-active {
+  background: var(--nim-primary, #4f46e5);
+  border-color: var(--nim-primary, #4f46e5);
+  color: var(--nim-on-primary, #ffffff);
+}
+.nim-docx-zoom { min-width: 56px; text-align: center; font-variant-numeric: tabular-nums; }
+
+.nim-docx-scroll {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.nim-docx-styles { display: none; }
+
+.nim-docx-body { zoom: var(--nim-docx-zoom, 1); }
+.nim-docx-body .docx-wrapper { background: transparent; padding: 0; }
+.nim-docx-body .docx-wrapper > section.docx {
+  margin: 0 auto 16px auto;
+  background: #ffffff;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.18);
+}
+
+.nim-docx-message {
+  padding: 32px 24px;
+  color: var(--nim-text-muted, #71717a);
+  font-size: 14px;
+  text-align: center;
+}
+.nim-docx-message-error { color: var(--nim-error, #dc2626); }
+
+.nim-docx-body a.nim-link-blocked {
+  color: var(--nim-text-disabled, #a1a1aa);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}

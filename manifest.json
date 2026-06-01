@@ -1,0 +1,40 @@
+{
+  "id": "com.nimbalyst.docx-viewer",
+  "name": "DOCX Viewer",
+  "version": "1.0.0",
+  "description": "View and read Word .docx documents in Nimbalyst",
+  "author": "Nimbalyst",
+  "main": "dist/index.js",
+  "styles": "dist/index.css",
+  "apiVersion": "1.0.0",
+  "permissions": { "ai": true },
+  "contributions": {
+    "customEditors": [
+      {
+        "filePatterns": ["*.docx"],
+        "displayName": "DOCX Viewer",
+        "component": "DocxViewerEditor",
+        "supportsDiffMode": false,
+        "supportsSourceMode": false
+      }
+    ],
+    "aiTools": ["docx.get_text"],
+    "fileIcons": { "*.docx": "description" }
+  },
+  "marketplace": {
+    "categories": ["data"],
+    "tags": ["docx", "word", "document", "viewer", "reader"],
+    "icon": "description",
+    "tagline": "Read Word documents without leaving Nimbalyst",
+    "fileTypes": [".docx"],
+    "repositoryUrl": "https://github.com/nimbalyst/nimbalyst-docx-viewer",
+    "screenshots": [
+      {
+        "alt": "Word document rendered inline",
+        "src": "screenshots/docx-viewer-dark.png",
+        "srcLight": "screenshots/docx-viewer-light.png",
+        "fileToOpen": "samples/demo.docx"
+      }
+    ]
+  }
+}

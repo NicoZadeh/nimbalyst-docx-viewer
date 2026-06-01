@@ -1,0 +1,36 @@
+{
+  "name": "nimbalyst-docx-viewer",
+  "version": "1.0.0",
+  "description": "View and read Word .docx documents in Nimbalyst",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "pretest": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "package": "node scripts/package.mjs"
+  },
+  "dependencies": {
+    "docx-preview": "0.3.5",
+    "mammoth": "1.9.0"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0 || ^19.0.0",
+    "react-dom": "^18.2.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@nimbalyst/extension-sdk": "0.2.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "vite": "7.1.12",
+    "@vitejs/plugin-react": "5.1.2",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8",
+    "happy-dom": "15.11.7"
+  }
+}
