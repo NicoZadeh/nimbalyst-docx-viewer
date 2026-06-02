@@ -59,6 +59,7 @@ export function HighlightLayer({ bodyRef, scrollRef, items, revision, scale, rea
       for (const item of items) {
         const rects = rectsForSpan(body, scroll, item.span);
         rects.forEach((rect, i) => {
+          if (rect.width <= 0 || rect.height <= 0) return; // skip degenerate/empty rects
           next.push({ key: `${item.id}:${i}`, color: KIND_COLOR[item.kind], rect });
         });
       }

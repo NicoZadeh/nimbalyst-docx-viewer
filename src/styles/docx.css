@@ -56,12 +56,15 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 4px 10px;
   flex-shrink: 0;
   background: var(--nim-bg, #ffffff);
   border-bottom: 1px solid var(--nim-border, #e4e4e7);
 }
 .nim-docx-pagenav { justify-content: center; }
+/* Keep the find bar compact rather than full-width. */
+.nim-docx-searchbar { gap: 4px; }
+.nim-docx-searchbar .nim-docx-search-input { flex: 0 1 260px; font-size: 13px; padding: 3px 8px; }
 .nim-docx-notice {
   padding: 6px 12px;
   flex-shrink: 0;
