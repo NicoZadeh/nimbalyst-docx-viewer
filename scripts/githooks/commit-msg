@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Scan the commit message itself (the original leak was a name in a message body).
+exec "$(git rev-parse --show-toplevel)/scripts/scan-secrets.sh" --commit-msg "$1"

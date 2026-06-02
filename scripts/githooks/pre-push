@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Last gate before anything reaches the public remote: scan the commits being
+# pushed AND re-scan the full history. Refs arrive on stdin (consumed by
+# --pre-push); --history reads only the object store.
+set -uo pipefail
+root="$(git rev-parse --show-toplevel)"
+"$root/scripts/scan-secrets.sh" --pre-push || exit 1
+exec "$root/scripts/scan-secrets.sh" --history

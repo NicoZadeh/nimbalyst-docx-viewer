@@ -11,7 +11,9 @@
     "pretest": "vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "package": "node scripts/package.mjs"
+    "package": "node scripts/package.mjs",
+    "scan": "bash scripts/scan-secrets.sh --history",
+    "prepare": "sh scripts/install-hooks.sh || true"
   },
   "dependencies": {
     "docx-preview": "0.3.5",

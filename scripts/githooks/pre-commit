@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Scan the staged index for secrets / confidential content before committing.
+exec "$(git rev-parse --show-toplevel)/scripts/scan-secrets.sh" --staged
