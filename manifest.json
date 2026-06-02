@@ -27,14 +27,6 @@
     "icon": "description",
     "tagline": "Read Word documents without leaving Nimbalyst",
     "fileTypes": [".docx"],
-    "repositoryUrl": "https://github.com/nimbalyst/nimbalyst-docx-viewer",
-    "screenshots": [
-      {
-        "alt": "Word document rendered inline",
-        "src": "screenshots/docx-viewer-dark.png",
-        "srcLight": "screenshots/docx-viewer-light.png",
-        "fileToOpen": "samples/demo.docx"
-      }
-    ]
+    "repositoryUrl": "https://github.com/NicoZadeh/nimbalyst-docx-viewer"
   }
 }

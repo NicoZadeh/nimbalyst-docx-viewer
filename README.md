@@ -1,114 +1,87 @@
-# DOCX Viewer
+# DOCX Viewer for Nimbalyst
 
-A Nimbalyst extension that renders Word `.docx` documents inline (read-only), lets you annotate
-and search them, and exposes their content to the assistant. The source `.docx` is never modified.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/NicoZadeh/nimbalyst-docx-viewer?sort=semver)](https://github.com/NicoZadeh/nimbalyst-docx-viewer/releases)
 
-## Features (v2.0.0)
+Read, search, annotate, and ask AI about Word `.docx` documents — without leaving Nimbalyst.
+A read-only viewer: it renders faithfully with [docx-preview](https://github.com/VolodymyrBaydalka/docxjs)
+and **never modifies your file**. Everything that "writes" (annotation export, copy-as-markdown)
+produces a separate file or clipboard text.
 
-Viewing
-- Faithful read-only rendering via [docx-preview](https://github.com/VolodymyrBaydalka/docxjs), continuous scroll.
-- Zoom in/out/reset, fit-to-width, and **trackpad pinch / Ctrl+wheel** zoom. Shortcuts: Cmd/Ctrl `+`/`-`/`0`.
-- Page navigation across rendered pages, labeled "Page x / N (approx.)" (docx-preview has no true Word pagination).
-- Per-file view state (zoom, fit, scroll position) is remembered.
-- Optional toggle to show the document's own Word comments and tracked changes (read-only).
+> Community extension by [NicoZadeh](https://github.com/NicoZadeh). Not officially affiliated with Nimbalyst.
 
-Annotate
-- Select text to highlight (yellow/green/pink/blue) and attach a comment. Highlights are painted
-  as a `getClientRects` overlay, so they stay aligned at any zoom.
-- Annotations persist per file (global `host.storage`, keyed by absolute path) via a text-quote
-  anchor that re-locates the quote after re-render; if a quote can no longer be found it is marked
-  "unanchored" rather than mis-placed.
-- A comments panel lists annotations with jump / edit / delete and export to Markdown or JSON.
+## Install
 
-Search & navigation
-- In-document find (Cmd/Ctrl+F) with match highlighting and next/prev.
-- Outline / TOC sidebar built from the document's headings.
+Requires the Nimbalyst app **≥ 0.58.5**.
 
-Send to the assistant
-- Copy a selection or a comment, or **send it to the chat** as context (`host.setEditorContext`).
-- Copy the whole document as Markdown.
+**From the marketplace (recommended)** — in Nimbalyst, open the Extensions marketplace, choose
+**Install from GitHub URL**, and paste:
 
-AI tools (all `scope: 'editor'`, `*.docx`)
-- `docx.get_text` — full plain text.
-- `docx.get_outline` — heading hierarchy.
-- `docx.get_metadata` — title/author/dates/word+char counts/approximate saved page count.
-- `docx.get_selection` — the current selection (only when the doc is open and focused).
-- `docx.get_annotations` — your highlights + comments.
+```
+https://github.com/NicoZadeh/nimbalyst-docx-viewer
+```
 
-Export
-- Export a NEW `.docx` (downloaded; the original is untouched) with your annotations written as real
-  Word comments. Anchoring is at paragraph granularity; comments that cannot be located are
-  reported and skipped, and existing comments in the source are preserved.
+It downloads the latest release's `.nimext` asset and installs it. Open any `.docx` and it renders.
 
-## Security
+**From a release file** — download `docx-viewer-<version>.nimext` from
+[Releases](https://github.com/NicoZadeh/nimbalyst-docx-viewer/releases) and install it via the
+Extensions / Extension Dev Tools install flow.
 
-- docx-preview is hardened: `renderAltChunks` off always; `renderComments`/`renderChanges` are off
-  by default and only enabled by the explicit read-only "Word marks" toggle (which re-runs the
-  generation-token render and re-sanitizes links).
-- Links are neutralized by a single delegated click guard: every anchor click is `preventDefault`-ed
-  so the frame never navigates, only `http(s)` is routed to `window.electronAPI.openExternal`, and
-  `javascript:`/`data:`/`vbscript:`/`file:` are stripped and marked disabled.
-- Extraction uses Mammoth; the annotated-`.docx` export escapes comment text and strips
-  XML-1.0-illegal control characters. No source file is ever mutated in place.
+## Features
 
-## Size & timeout policy
+- **Faithful read-only rendering** of `.docx` with continuous scroll.
+- **Zoom** in/out/reset, fit-to-width, trackpad pinch / Ctrl-wheel, and Cmd/Ctrl `+` `-` `0`.
+- **Find** in document (Cmd/Ctrl+F) with match highlighting and next/prev.
+- **Outline / TOC sidebar** from the document's headings (click to jump; resizable).
+- **Annotations** — highlight text (4 colors) and attach comments. Click a highlight to edit or
+  delete it. Persisted per file. A comments panel lists them with copy / send / export.
+- **Visual page-break lines** at each page boundary (toggle).
+- **Copy as Markdown** of the whole document.
+- **Export comments to Word** — a new `.docx` with your annotations as real Word comments (the
+  original is untouched).
+- **Show Word comments & tracked changes** (read-only toggle; off by default).
+- **AI tools** the assistant can call: `docx.get_text`, `docx.get_outline`, `docx.get_metadata`,
+  `docx.get_selection`, `docx.get_annotations` — so you can ask it to summarize, outline, or reason
+  about the document or your highlights. Works even for `.docx` files that aren't open in a tab.
 
-- Soft limit roughly 25 MB; hard limit 50 MB render / 25 MB extraction.
-- The `byteLength` guard (before Mammoth/jszip) is the real safeguard; the ~20s extraction timeout
-  is BEST EFFORT only (a CPU-bound parse on the main thread blocks the timer).
-- The initial host binary load cannot be preflighted (no host stat API), so very large hidden
-  documents remain best effort. `savedPageCount` from metadata is reported as approximate.
+## Security & privacy
 
-## Install locally in Nimbalyst (dev)
+- Renders locally. No network calls except opening `http(s)` links you click (routed through the
+  host's external-link handler; the editor frame never navigates).
+- docx-preview runs hardened: `renderAltChunks` off; `renderComments` / `renderChanges` off by
+  default. Dangerous link schemes (`javascript:` / `data:` / `vbscript:` / `file:`) are neutralized.
+- Your `.docx` is never modified in place; annotations live in the extension's storage and exports
+  are separate downloaded files.
 
-Requires Nimbalyst app >= 0.58.5.
+## Known limitations
 
-1. `npm ci`
-2. `npm run build`
-3. Install the local folder via Extension Dev Tools (the `extension_install` flow), or install the
-   packaged `build/docx-viewer-2.0.0.nimext`.
-4. Iterate with `extension_build`, `extension_install`, `extension_reload`. A reload (or app
-   restart) re-runs extension discovery.
+- `docx-preview` does not compute real Word pagination. Page-break lines are drawn at saved
+  page-size intervals; a single block taller than a page (e.g. a large table) is not split.
+- The Outline reads Word **heading styles**; documents that use bold text instead of real headings
+  will have an empty outline.
+- Highlighting across table cells highlights whole cells (browser selection behavior); highlight
+  within a cell for a tight result.
 
-## Manual test checklist
+## Development
 
-1. Open `samples/demo.docx`. Confirm it renders; zoom buttons, **trackpad pinch / Ctrl+wheel**,
-   fit-width, and Cmd/Ctrl `+`/`-`/`0` all work; the page count shows.
-2. Select a sentence: the floating toolbar appears. Highlight it, add a comment, open the Comments
-   panel, edit/delete, and try "Copy" and "Send to AI". Reopen the file and confirm the annotation
-   and your zoom/scroll persist.
-3. Press Cmd/Ctrl+F and search; matches highlight and next/prev navigate. Open the Outline panel and
-   click a heading to jump.
-4. Ask the assistant to summarize a `.docx` that is NOT open in a tab (exercises the hidden-mount
-   path and `docx.get_text`). Ask it for the outline/metadata to exercise those tools.
-5. Security smoke with `samples/demo-links.docx`: the `https` link opens via `openExternal`, the
-   `javascript:` link is struck through and inert. Toggle "Word marks" to show the doc's own comment
-   and tracked change; toggle off to hide them again.
-6. "Copy MD" copies Markdown. With at least one annotation, "Export comments" downloads
-   `<name>-commented.docx`; open it in Word and confirm the comment is present and the original
-   comment (in demo-links) is preserved.
-7. Large-image memory with `samples/demo-images.docx`: note renderer memory with `useBase64URL`.
+```bash
+npm ci
+npm run build        # -> dist/index.js + dist/index.css
+npm test             # 65 tests (vitest): extraction, OOXML, AI tools, sanitization, DOM mapping
+npm run typecheck
+npm run package      # builds + zips build/docx-viewer-<version>.nimext (needs the `zip` CLI)
+```
 
-## Build & test
+- React and React DOM are host-provided (externalized); `docx-preview`, `mammoth`, and `jszip` are
+  bundled. Built with the `@nimbalyst/extension-sdk` Vite helper.
+- Test fixtures and samples are generated by `python3 scripts/make-fixtures.py` (Pillow required for
+  the image sample). Live rendering / overlay painting are runtime paths; their logic is unit-tested.
+- Releases: pushing a `v*` tag runs `.github/workflows/release.yml`, which builds, packages, and
+  uploads the `.nimext` as a release asset. `dist/` is not committed.
 
-- `npm run build` · `npm test` · `npm run typecheck` · `npm run package` (needs the `zip` CLI).
-- 61 automated tests cover the logic, extraction, OOXML write-back, AI-tool handlers, link
-  sanitization, and DOM offset mapping. The live rendering, highlight/overlay painting, trackpad
-  events, and chat round-trip are runtime paths verified manually (their logic is unit-tested).
-- Fixtures/samples are generated by `python3 scripts/make-fixtures.py` (PIL required for the image).
+Contributions welcome — screenshots for the marketplace listing especially. See
+[CHANGELOG.md](CHANGELOG.md) for release notes.
 
-## Distribution
+## License
 
-A GitHub Release `.nimext` asset is produced by `.github/workflows/release.yml` on `v*` tags. `dist/`
-is not committed.
-
-## Notable implementation choices / deviations
-
-- Highlights/search paint via a `getClientRects` DOM overlay (not the CSS Custom Highlight API),
-  which stays aligned under the CSS `zoom` used for scaling.
-- Annotations are a viewer-side overlay in `host.storage`; the original `.docx` is never edited.
-  "Export comments" produces a separate downloaded file.
-- A shared Mammoth input helper selects `{ buffer }` (Node) vs `{ arrayBuffer }` (renderer).
-- Metadata XML is parsed with a small dependency-free extractor; only `jszip` was added as a dep.
-- `package.json` uses `"type": "module"`; `ignoreLastRenderedPageBreak: false` is set explicitly.
-- `docx.get_selection` returns data only when the document is the open, focused editor.
+[MIT](LICENSE) © NicoZadeh
