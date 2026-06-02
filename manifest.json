@@ -3,7 +3,7 @@
   "name": "DOCX Viewer",
   "version": "1.0.0",
   "description": "View and read Word .docx documents in Nimbalyst",
-  "author": "Nimbalyst",
+  "author": "NicoZadeh",
   "main": "dist/index.js",
   "styles": "dist/index.css",
   "apiVersion": "1.0.0",
