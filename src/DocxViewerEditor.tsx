@@ -417,8 +417,9 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
       setComposing(null);
       window.getSelection()?.removeAllRanges();
       setRevision((r) => r + 1);
+      showNotice(comment.trim() ? 'Comment added.' : 'Highlight added.');
     },
-    [annotations, bodyRef],
+    [annotations, bodyRef, showNotice],
   );
 
   const sendTextToAgent = useCallback(
@@ -516,10 +517,20 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
 
   const activeAnnotation = activeComment ? annotations.annotations.find((a) => a.id === activeComment.id) : undefined;
 
-  const copyAnnotation = useCallback((a: Annotation) => void copyToClipboard(annotationToText(a)), []);
+  const copyAnnotation = useCallback(
+    (a: Annotation) => {
+      copyToClipboard(annotationToText(a))
+        .then(() => showNotice('Comment copied to clipboard.'))
+        .catch(() => showNotice('Could not copy.'));
+    },
+    [showNotice],
+  );
   const sendAnnotation = useCallback(
-    (a: Annotation) => sendTextToAgent(`DOCX: "${snippet(a.quote)}"`, annotationToText(a)),
-    [sendTextToAgent],
+    (a: Annotation) => {
+      sendTextToAgent(`DOCX: "${snippet(a.quote)}"`, annotationToText(a));
+      showNotice('Added to the chat as context. Ask the assistant about it.');
+    },
+    [sendTextToAgent, showNotice],
   );
 
   const showLayer = status === 'ready';
@@ -604,12 +615,14 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
                   setSelection(null);
                 }}
                 onCopy={() => {
-                  void copyToClipboard(selectionText(selection.span));
+                  const text = selectionText(selection.span);
+                  copyToClipboard(text).then(() => showNotice('Copied selection.')).catch(() => showNotice('Could not copy.'));
                   setSelection(null);
                 }}
                 onAsk={() => {
                   const text = selectionText(selection.span);
                   sendTextToAgent(`DOCX: "${snippet(text)}"`, text);
+                  showNotice('Added selection to the chat.');
                   setSelection(null);
                 }}
               />
@@ -642,10 +655,12 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
                 onSave={(text) => {
                   void annotations.update(activeAnnotation.id, { comment: text });
                   setActiveComment(null);
+                  showNotice('Comment saved.');
                 }}
                 onDelete={() => {
                   void annotations.remove(activeAnnotation.id).then(() => setRevision((r) => r + 1));
                   setActiveComment(null);
+                  showNotice('Highlight deleted.');
                 }}
                 onClose={() => setActiveComment(null)}
               />
@@ -662,13 +677,18 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
             onDelete={(id) => void annotations.remove(id).then(() => setRevision((r) => r + 1))}
             onCopy={copyAnnotation}
             onSend={sendAnnotation}
-            onCopyAll={() => void copyToClipboard(annotationsToMarkdown(annotations.annotations))}
-            onSendAll={() =>
+            onCopyAll={() =>
+              copyToClipboard(annotationsToMarkdown(annotations.annotations))
+                .then(() => showNotice('All comments copied.'))
+                .catch(() => showNotice('Could not copy.'))
+            }
+            onSendAll={() => {
               sendTextToAgent(
                 `DOCX: ${annotations.annotations.length} highlight${annotations.annotations.length === 1 ? '' : 's'}`,
                 annotationsToMarkdown(annotations.annotations),
-              )
-            }
+              );
+              showNotice('All highlights added to the chat.');
+            }}
             onExportMarkdown={() => {
               const md = annotationsToMarkdown(annotations.annotations);
               download(`${host.fileName.replace(/\.docx$/i, '')}-comments.md`, new TextEncoder().encode(md), 'text/markdown');
