@@ -5,6 +5,7 @@ import { Toolbar } from './components/Toolbar';
 import { DocxScrollView } from './components/DocxScrollView';
 import { HighlightLayer, type HighlightItem } from './components/HighlightLayer';
 import { SelectionToolbar } from './components/SelectionToolbar';
+import { CommentComposer } from './components/CommentComposer';
 import { CommentsPanel } from './components/CommentsPanel';
 import { SearchBar } from './components/SearchBar';
 import { OutlinePanel } from './components/OutlinePanel';
@@ -81,6 +82,7 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
   const [outline, setOutline] = useState<OutlineItem[]>([]);
   const [outlineLoading, setOutlineLoading] = useState(false);
   const [selection, setSelection] = useState<{ x: number; y: number; span: Span } | null>(null);
+  const [composing, setComposing] = useState<{ x: number; y: number; span: Span } | null>(null);
   const [revision, setRevision] = useState(0);
   const [pages, setPages] = useState<{ current: number; total: number }>({ current: 1, total: 0 });
 
@@ -354,6 +356,7 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
 
   // ---- Selection toolbar ----
   const onMouseUp = useCallback(() => {
+    if (composing) return; // don't disturb an open comment composer
     const body = bodyRef.current;
     const scroll = scrollRef.current;
     if (!body || !scroll) return setSelection(null);
@@ -365,20 +368,20 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
     const x = rect.left - base.left + scroll.scrollLeft + rect.width / 2;
     const y = rect.top - base.top + scroll.scrollTop - 8;
     setSelection({ x, y: Math.max(4, y), span });
-  }, [bodyRef, scrollRef]);
+  }, [bodyRef, scrollRef, composing]);
 
   const selectionText = useCallback((span: Span) => bodyText(bodyRef.current).slice(span.start, span.end), [bodyRef]);
 
   const addHighlight = useCallback(
-    async (color: HighlightColor, comment: string) => {
-      if (!selection) return;
+    async (span: Span, color: HighlightColor, comment: string) => {
       const text = bodyText(bodyRef.current);
-      await annotations.add(text, selection.span.start, selection.span.end, comment, color);
+      await annotations.add(text, span.start, span.end, comment, color);
       setSelection(null);
+      setComposing(null);
       window.getSelection()?.removeAllRanges();
       setRevision((r) => r + 1);
     },
-    [annotations, selection, bodyRef],
+    [annotations, bodyRef],
   );
 
   const sendTextToAgent = useCallback(
@@ -533,10 +536,10 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
               <SelectionToolbar
                 x={selection.x}
                 y={selection.y}
-                onHighlight={(color) => void addHighlight(color, '')}
+                onHighlight={(color) => void addHighlight(selection.span, color, '')}
                 onComment={() => {
-                  const comment = window.prompt('Comment:') ?? '';
-                  void addHighlight('yellow', comment);
+                  setComposing({ x: selection.x, y: selection.y, span: selection.span });
+                  setSelection(null);
                 }}
                 onCopy={() => {
                   void copyToClipboard(selectionText(selection.span));
@@ -545,6 +548,17 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
                 onAsk={() => {
                   sendTextToAgent('DOCX selection', selectionText(selection.span));
                   setSelection(null);
+                }}
+              />
+            )}
+            {composing && (
+              <CommentComposer
+                x={composing.x}
+                y={composing.y}
+                onSave={(text) => void addHighlight(composing.span, 'yellow', text)}
+                onCancel={() => {
+                  setComposing(null);
+                  window.getSelection()?.removeAllRanges();
                 }}
               />
             )}

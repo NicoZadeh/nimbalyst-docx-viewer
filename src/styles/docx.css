@@ -119,6 +119,35 @@
 }
 .nim-docx-swatch { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.2); cursor: pointer; padding: 0; }
 
+/* Inline comment composer */
+.nim-docx-composer {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 6;
+  width: 260px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--nim-bg, #ffffff);
+  border: 1px solid var(--nim-border, #d4d4d8);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+.nim-docx-composer-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px;
+  border: 1px solid var(--nim-border, #d4d4d8);
+  border-radius: 6px;
+  background: var(--nim-bg-secondary, #f4f4f5);
+  color: var(--nim-text, #18181b);
+}
+.nim-docx-composer-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
 /* Side panels */
 .nim-docx-panel {
   width: 280px;
