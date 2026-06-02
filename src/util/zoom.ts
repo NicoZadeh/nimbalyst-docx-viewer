@@ -12,7 +12,7 @@ export function clampScale(scale: number): number {
  * constant ratio. Caller only invokes this when isZoomWheel(e) is true.
  */
 export function nextScaleFromWheel(deltaY: number, scale: number): number {
-  return clampScale(scale * Math.exp(-deltaY * 0.0015));
+  return clampScale(scale * Math.exp(-deltaY * 0.004));
 }
 
 export function isZoomWheel(e: { ctrlKey: boolean; metaKey: boolean }): boolean {

@@ -1,4 +1,5 @@
 import { MaterialSymbol } from '@nimbalyst/extension-sdk';
+import { OverflowMenu, type MenuItem } from './OverflowMenu';
 
 interface ToolbarProps {
   scale: number;
@@ -25,6 +26,18 @@ interface ToolbarProps {
 
 export function Toolbar(props: ToolbarProps) {
   const percent = Math.round(props.scale * 100);
+  const moreItems: MenuItem[] = [
+    { label: 'Page breaks', icon: 'auto_stories', onClick: props.onTogglePages, active: props.pagesMode },
+    {
+      label: 'Show Word comments & changes',
+      icon: 'rate_review',
+      onClick: props.onToggleNativeComments,
+      active: props.showNativeComments,
+    },
+    { label: 'Copy as Markdown', icon: 'content_copy', onClick: props.onCopyMarkdown },
+    { label: 'Export comments to Word', icon: 'ios_share', onClick: props.onExportComments, disabled: props.annotationCount === 0 },
+  ];
+
   return (
     <div className="nim-docx-toolbar">
       <button
@@ -62,32 +75,7 @@ export function Toolbar(props: ToolbarProps) {
         <MaterialSymbol icon="chat_bubble" size={16} />
         Comments{props.annotationCount > 0 ? ` (${props.annotationCount})` : ''}
       </button>
-      <button
-        type="button"
-        className={props.showNativeComments ? 'nim-docx-btn is-active' : 'nim-docx-btn'}
-        onClick={props.onToggleNativeComments}
-        title="Show the document's own Word comments and tracked changes (read-only). Off by default."
-      >
-        <MaterialSymbol icon="rate_review" size={16} />
-        Markup
-      </button>
-      <button
-        type="button"
-        className={props.pagesMode ? 'nim-docx-btn is-active' : 'nim-docx-btn'}
-        onClick={props.onTogglePages}
-        title="Show visual page breaks between pages"
-      >
-        <MaterialSymbol icon="auto_stories" size={16} />
-        Pages
-      </button>
-      <button type="button" className="nim-docx-btn" onClick={props.onCopyMarkdown} title="Copy the whole document as Markdown">
-        <MaterialSymbol icon="content_copy" size={16} />
-        Copy MD
-      </button>
-      <button type="button" className="nim-docx-btn" onClick={props.onExportComments} title="Download a .docx with your comments written as Word comments" disabled={props.annotationCount === 0}>
-        <MaterialSymbol icon="ios_share" size={16} />
-        Export
-      </button>
+      <OverflowMenu items={moreItems} />
     </div>
   );
 }

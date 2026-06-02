@@ -6,6 +6,8 @@ import { DocxScrollView } from './components/DocxScrollView';
 import { HighlightLayer, type HighlightItem } from './components/HighlightLayer';
 import { SelectionToolbar } from './components/SelectionToolbar';
 import { CommentComposer } from './components/CommentComposer';
+import { CommentPopover } from './components/CommentPopover';
+import type { OverlayRect } from './annotations/domRange';
 import { CommentsPanel } from './components/CommentsPanel';
 import { SearchBar } from './components/SearchBar';
 import { OutlinePanel } from './components/OutlinePanel';
@@ -21,7 +23,6 @@ import { extractMetadata } from './ai/extractMetadata';
 import type { DocxEditorAPI, AnnotationSummary } from './ai/docxTools';
 import { findMatches } from './search/search';
 import { isZoomWheel, nextScaleFromWheel, clampScale } from './util/zoom';
-import { computePageGaps } from './util/pagination';
 import { buildAnnotatedDocx } from './export/docxComments';
 import { docToMarkdown } from './export/markdown';
 import { annotationsToMarkdown, annotationsToJSON, annotationToText } from './export/annotationsExport';
@@ -91,6 +92,8 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
   const [outlineLoading, setOutlineLoading] = useState(false);
   const [selection, setSelection] = useState<{ x: number; y: number; span: Span } | null>(null);
   const [composing, setComposing] = useState<{ x: number; y: number; span: Span } | null>(null);
+  const [activeComment, setActiveComment] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [outlineWidth, setOutlineWidth] = useState(280);
   const [revision, setRevision] = useState(0);
   const [pages, setPages] = useState<{ current: number; total: number }>({ current: 1, total: 0 });
 
@@ -320,35 +323,31 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
     [getSections],
   );
 
-  // ---- Visual page breaking (block-level spacers) ----
+  // ---- Visual page breaks: a line across the page at each page-height boundary ----
+  // Reflowing content into sheets can't split a single big block (e.g. one large table), so we
+  // just draw a divider line at each page boundary. The line crosses content; that's acceptable.
   useEffect(() => {
     const body = bodyRef.current;
     if (!body || status !== 'ready') return;
     const sections = Array.from(body.querySelectorAll('section')) as HTMLElement[];
-    sections.forEach((s) => s.querySelectorAll('.nim-docx-page-gap').forEach((g) => g.remove()));
+    sections.forEach((s) => s.querySelectorAll('.nim-docx-page-line').forEach((l) => l.remove()));
     if (!pagesMode) return;
     const s = scaleRef.current || 1;
     sections.forEach((section) => {
       const pageHeight = parseFloat(getComputedStyle(section).minHeight);
       if (!(pageHeight > 0)) return;
-      const blocks = (Array.from(section.children) as HTMLElement[]).filter(
-        (c) => !c.classList.contains('nim-docx-page-gap'),
-      );
-      if (blocks.length < 2) return; // a single big block (e.g. one table) cannot be split
-      // Heights normalized to unzoomed CSS px so the math is scale-independent.
-      const heights = blocks.map((b) => b.getBoundingClientRect().height / s);
-      const gaps = computePageGaps(heights, pageHeight, 24);
-      const cs = getComputedStyle(section);
-      for (let i = gaps.length - 1; i >= 0; i -= 1) {
-        const spacer = document.createElement('div');
-        spacer.className = 'nim-docx-page-gap';
-        spacer.style.height = `${gaps[i].height}px`;
-        spacer.style.marginLeft = `-${cs.paddingLeft}`;
-        spacer.style.marginRight = `-${cs.paddingRight}`;
-        section.insertBefore(spacer, blocks[gaps[i].beforeIndex]);
+      const totalHeight = section.getBoundingClientRect().height / s; // unzoomed section height
+      const count = Math.floor(totalHeight / pageHeight - 0.01);
+      for (let i = 1; i <= count; i += 1) {
+        const line = document.createElement('div');
+        line.className = 'nim-docx-page-line';
+        line.style.top = `${i * pageHeight}px`;
+        section.appendChild(line);
       }
     });
-  }, [pagesMode, status, scale, bodyRef]);
+    // Lines are positioned in unzoomed px inside the zoomed body, so they scale automatically —
+    // no need to recompute on zoom (keeps zooming snappy).
+  }, [pagesMode, status, bodyRef]);
 
   // ---- Search ----
   const matches = useMemo<Span[]>(() => {
@@ -511,6 +510,12 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
     [resolved, bodyRef, scrollRef],
   );
 
+  const onAnnotationClick = useCallback((id: string, rect: OverlayRect) => {
+    setActiveComment({ id, x: rect.left + rect.width / 2, y: Math.max(4, rect.top - 8) });
+  }, []);
+
+  const activeAnnotation = activeComment ? annotations.annotations.find((a) => a.id === activeComment.id) : undefined;
+
   const copyAnnotation = useCallback((a: Annotation) => void copyToClipboard(annotationToText(a)), []);
   const sendAnnotation = useCallback(
     (a: Annotation) => sendTextToAgent(`DOCX: "${snippet(a.quote)}"`, annotationToText(a)),
@@ -565,13 +570,30 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
       <PageNav current={pages.current} total={pages.total} onPrev={() => gotoPage(pages.current - 1)} onNext={() => gotoPage(pages.current + 1)} />
 
       <div className="nim-docx-main">
-        {outlineOpen && <OutlinePanel items={outline} loading={outlineLoading} onJump={onJumpHeading} onClose={() => setOutlineOpen(false)} />}
+        {outlineOpen && (
+          <OutlinePanel
+            items={outline}
+            loading={outlineLoading}
+            width={outlineWidth}
+            onWidthChange={setOutlineWidth}
+            onJump={onJumpHeading}
+            onClose={() => setOutlineOpen(false)}
+          />
+        )}
 
         {error ? (
           <div className="nim-docx-message nim-docx-message-error">Could not load this document. {error.message}</div>
         ) : (
           <DocxScrollView scrollRef={scrollRef} bodyRef={bodyRef} styleRef={styleRef} status={status} scale={scale} onMouseUp={onMouseUp}>
-            <HighlightLayer bodyRef={bodyRef} scrollRef={scrollRef} items={highlightItems} revision={revision} scale={scale} ready={showLayer} />
+            <HighlightLayer
+              bodyRef={bodyRef}
+              scrollRef={scrollRef}
+              items={highlightItems}
+              revision={revision}
+              scale={scale}
+              ready={showLayer}
+              onAnnotationClick={onAnnotationClick}
+            />
             {selection && (
               <SelectionToolbar
                 x={selection.x}
@@ -609,6 +631,23 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
                   setComposing(null);
                   window.getSelection()?.removeAllRanges();
                 }}
+              />
+            )}
+            {activeComment && activeAnnotation && (
+              <CommentPopover
+                x={activeComment.x}
+                y={activeComment.y}
+                quote={activeAnnotation.quote}
+                comment={activeAnnotation.comment}
+                onSave={(text) => {
+                  void annotations.update(activeAnnotation.id, { comment: text });
+                  setActiveComment(null);
+                }}
+                onDelete={() => {
+                  void annotations.remove(activeAnnotation.id).then(() => setRevision((r) => r + 1));
+                  setActiveComment(null);
+                }}
+                onClose={() => setActiveComment(null)}
               />
             )}
           </DocxScrollView>

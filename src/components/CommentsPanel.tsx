@@ -66,9 +66,18 @@ export function CommentsPanel({
                   }}
                 />
                 <div className="nim-docx-comment-actions">
-                  <button type="button" className="nim-docx-btn nim-docx-mini" onClick={() => onCopy(a)}>Copy</button>
-                  <button type="button" className="nim-docx-btn nim-docx-mini" onClick={() => onSend(a)}>Send to AI</button>
-                  <button type="button" className="nim-docx-btn nim-docx-mini" onClick={() => onDelete(a.id)}>Delete</button>
+                  <button type="button" className="nim-docx-btn nim-docx-mini" onClick={() => onCopy(a)} title="Copy">
+                    <MaterialSymbol icon="content_copy" size={15} />
+                    Copy
+                  </button>
+                  <button type="button" className="nim-docx-btn nim-docx-mini nim-docx-btn-accent" onClick={() => onSend(a)} title="Send to the assistant">
+                    <MaterialSymbol icon="auto_awesome" size={15} />
+                    Send
+                  </button>
+                  <div className="nim-docx-comment-spacer" />
+                  <button type="button" className="nim-docx-btn nim-docx-icon nim-docx-btn-danger" onClick={() => onDelete(a.id)} title="Delete highlight" aria-label="Delete highlight">
+                    <MaterialSymbol icon="delete" size={16} />
+                  </button>
                 </div>
               </li>
             ))}

@@ -19,6 +19,12 @@ interface HighlightLayerProps {
   /** Current zoom; a change re-lays-out the rects. Kept separate from `revision` so the two can never collide. */
   scale: number;
   ready: boolean;
+  /** Click on an annotation (not search) highlight; rect is in scroll-content coords. */
+  onAnnotationClick?: (id: string, rect: OverlayRect) => void;
+}
+
+function isAnnotation(kind: HighlightKind): boolean {
+  return kind !== 'search' && kind !== 'search-active';
 }
 
 // Low-alpha translucent fills: enough tint to read as a highlight, light enough that the black
@@ -34,8 +40,10 @@ const KIND_COLOR: Record<HighlightKind, string> = {
 
 interface PaintedRect {
   key: string;
+  id: string;
   color: string;
   rect: OverlayRect;
+  clickable: boolean;
 }
 
 /**
@@ -44,7 +52,7 @@ interface PaintedRect {
  * on resize / zoom / re-render — never on scroll. getClientRects reflects the active CSS zoom, so
  * this aligns at any scale (unlike the CSS Custom Highlight API over `zoom`).
  */
-export function HighlightLayer({ bodyRef, scrollRef, items, revision, scale, ready }: HighlightLayerProps) {
+export function HighlightLayer({ bodyRef, scrollRef, items, revision, scale, ready, onAnnotationClick }: HighlightLayerProps) {
   const [painted, setPainted] = useState<PaintedRect[]>([]);
 
   useEffect(() => {
@@ -57,10 +65,11 @@ export function HighlightLayer({ bodyRef, scrollRef, items, revision, scale, rea
     const compute = () => {
       const next: PaintedRect[] = [];
       for (const item of items) {
+        const clickable = isAnnotation(item.kind);
         const rects = rectsForSpan(body, scroll, item.span);
         rects.forEach((rect, i) => {
           if (rect.width <= 0 || rect.height <= 0) return; // skip degenerate/empty rects
-          next.push({ key: `${item.id}:${i}`, color: KIND_COLOR[item.kind], rect });
+          next.push({ key: `${item.id}:${i}`, id: item.id, color: KIND_COLOR[item.kind], rect, clickable });
         });
       }
       setPainted(next);
@@ -77,8 +86,9 @@ export function HighlightLayer({ bodyRef, scrollRef, items, revision, scale, rea
       {painted.map((p) => (
         <div
           key={p.key}
-          className="nim-docx-hl"
+          className={p.clickable ? 'nim-docx-hl nim-docx-hl-click' : 'nim-docx-hl'}
           style={{ left: p.rect.left, top: p.rect.top, width: p.rect.width, height: p.rect.height, background: p.color }}
+          onClick={p.clickable && onAnnotationClick ? () => onAnnotationClick(p.id, p.rect) : undefined}
         />
       ))}
     </div>

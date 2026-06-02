@@ -111,12 +111,98 @@
 /* Low-alpha translucent fill (reliable over the zoomed page): text stays readable through it. */
 .nim-docx-hl { position: absolute; border-radius: 2px; pointer-events: none; }
 
-/* Visual gap between paginated "pages" within a section. */
-.nim-docx-page-gap {
-  background: var(--nim-bg-secondary, #f4f4f5);
-  box-shadow: inset 0 7px 7px -7px rgba(0, 0, 0, 0.3), inset 0 -7px 7px -7px rgba(0, 0, 0, 0.3);
+/* Visual page-break line at each page boundary (drawn across the page; may cross content). */
+.nim-docx-body .docx-wrapper > section.docx { position: relative; }
+.nim-docx-page-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px dashed var(--nim-border, #b4b4bb);
   pointer-events: none;
 }
+
+/* Clickable annotation highlights open the comment popover. */
+.nim-docx-hl-click { pointer-events: auto; cursor: pointer; }
+
+/* Accent / danger button variants */
+.nim-docx-btn-accent {
+  background: var(--nim-primary, #4f46e5);
+  border-color: var(--nim-primary, #4f46e5);
+  color: var(--nim-on-primary, #ffffff);
+}
+.nim-docx-btn-accent:hover:not(:disabled) { opacity: 0.9; }
+.nim-docx-btn-danger { color: var(--nim-error, #dc2626); border-color: var(--nim-error, #dc2626); }
+.nim-docx-btn-danger:hover:not(:disabled) { background: var(--nim-error, #dc2626); color: #ffffff; }
+
+/* Overflow "..." menu */
+.nim-docx-more { position: relative; display: inline-flex; }
+.nim-docx-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  min-width: 230px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--nim-bg, #ffffff);
+  border: 1px solid var(--nim-border, #d4d4d8);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+.nim-docx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: none;
+  color: var(--nim-text, #18181b);
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+.nim-docx-menu-item:hover:not(:disabled) { background: var(--nim-bg-hover, #ececef); }
+.nim-docx-menu-item:disabled { opacity: 0.45; cursor: default; }
+.nim-docx-menu-item.is-active { color: var(--nim-primary, #4f46e5); }
+.nim-docx-menu-label { flex: 1; }
+
+/* Click-a-highlight comment popover */
+.nim-docx-popover {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 6;
+  width: 280px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--nim-bg, #ffffff);
+  border: 1px solid var(--nim-border, #d4d4d8);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+.nim-docx-popover-quote { font-style: italic; font-size: 12px; color: var(--nim-text-muted, #52525b); }
+.nim-docx-popover-actions { display: flex; align-items: center; gap: 6px; }
+.nim-docx-popover-spacer,
+.nim-docx-comment-spacer { flex: 1 1 auto; }
+
+/* Panel resize handle */
+.nim-docx-outline { position: relative; }
+.nim-docx-resize-right {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 3;
+}
+.nim-docx-resize-right:hover { background: var(--nim-primary, #4f46e5); opacity: 0.35; }
 
 /* Floating selection toolbar */
 .nim-docx-seltoolbar {
