@@ -58,6 +58,13 @@
   border-bottom: 1px solid var(--nim-border, #e4e4e7);
 }
 .nim-docx-pagenav { justify-content: center; }
+.nim-docx-notice {
+  padding: 6px 12px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--nim-on-primary, #ffffff);
+  background: var(--nim-primary, #4f46e5);
+}
 .nim-docx-search-input {
   flex: 1;
   padding: 4px 8px;

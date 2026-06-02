@@ -36,4 +36,8 @@ describe('docToMarkdown', () => {
     const md = await docToMarkdown(fixture('sample.docx'));
     expect(md).toContain('The quick brown fox');
   });
+
+  it('fails fast over the byte cap (matches the other extractors)', async () => {
+    await expect(docToMarkdown(fixture('sample.docx'), { maxBytes: 10 })).rejects.toThrow(/too large/i);
+  });
 });

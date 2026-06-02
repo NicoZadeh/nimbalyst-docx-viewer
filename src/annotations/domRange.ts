@@ -35,6 +35,26 @@ function textNodes(root: Node): Text[] {
 
 /** Character offset of (node, offsetInNode) within root.textContent. */
 export function offsetOf(root: Node, node: Node, offsetInNode: number): number {
+  // Element container: offsetInNode is a CHILD INDEX (common for triple-click / edge selections).
+  // Resolve it to a character offset = (text before the element) + (text of children[0..index]).
+  if (node.nodeType !== TEXT_NODE) {
+    let beforeEl = 0;
+    let foundStart = false;
+    for (const n of textNodes(root)) {
+      if (node.contains(n)) {
+        foundStart = true;
+        break;
+      }
+      beforeEl += n.data.length;
+    }
+    if (!foundStart) return beforeEl; // element has no text; position after preceding text
+    let withinEl = 0;
+    const children = node.childNodes;
+    for (let i = 0; i < Math.min(offsetInNode, children.length); i += 1) {
+      withinEl += (children[i].textContent ?? '').length;
+    }
+    return beforeEl + withinEl;
+  }
   let total = 0;
   for (const n of textNodes(root)) {
     if (n === node) return total + offsetInNode;

@@ -14,8 +14,10 @@ interface HighlightLayerProps {
   bodyRef: RefObject<HTMLDivElement>;
   scrollRef: RefObject<HTMLDivElement>;
   items: HighlightItem[];
-  /** Bump to force recompute (e.g. on zoom or re-render). */
+  /** Bumped on re-render to force recompute. */
   revision: number;
+  /** Current zoom; a change re-lays-out the rects. Kept separate from `revision` so the two can never collide. */
+  scale: number;
   ready: boolean;
 }
 
@@ -40,7 +42,7 @@ interface PaintedRect {
  * on resize / zoom / re-render — never on scroll. getClientRects reflects the active CSS zoom, so
  * this aligns at any scale (unlike the CSS Custom Highlight API over `zoom`).
  */
-export function HighlightLayer({ bodyRef, scrollRef, items, revision, ready }: HighlightLayerProps) {
+export function HighlightLayer({ bodyRef, scrollRef, items, revision, scale, ready }: HighlightLayerProps) {
   const [painted, setPainted] = useState<PaintedRect[]>([]);
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export function HighlightLayer({ bodyRef, scrollRef, items, revision, ready }: H
     observer.observe(scroll);
     observer.observe(body);
     return () => observer.disconnect();
-  }, [bodyRef, scrollRef, items, revision, ready]);
+  }, [bodyRef, scrollRef, items, revision, scale, ready]);
 
   return (
     <div className="nim-docx-overlay" aria-hidden="true">

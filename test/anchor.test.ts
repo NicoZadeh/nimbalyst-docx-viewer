@@ -24,6 +24,16 @@ describe('text-quote anchor', () => {
     expect(resolveAnchor(TEXT, anchor1)).toEqual({ start: first, end: first + 'quick brown'.length });
   });
 
+  it('lets prefix/suffix context override proximity when startHint is wrong', () => {
+    const text = 'the cat sat. the cat ran.';
+    const second = text.lastIndexOf('cat');
+    const anchor = serializeAnchor(text, second, second + 3);
+    // Lie about the original position: point startHint at the FIRST occurrence.
+    const misled = { ...anchor, startHint: text.indexOf('cat') };
+    // Context (suffix " ran.") must still resolve to the second occurrence.
+    expect(resolveAnchor(text, misled)).toEqual({ start: second, end: second + 3 });
+  });
+
   it('returns null when the quote is gone (degrade, never mis-place)', () => {
     const anchor = serializeAnchor(TEXT, 0, 3);
     expect(resolveAnchor('completely different content', anchor)).toBeNull();

@@ -10,8 +10,13 @@ export interface AnnotatedDocxResult {
   unmatched: Annotation[];
 }
 
+// Strip characters that are illegal in XML 1.0 (keep tab/newline/CR), then escape. Comment text
+// comes from user input (window.prompt / textarea), so a stray control char must not corrupt the
+// exported OOXML.
 function escapeXml(s: string): string {
   return s
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -54,24 +59,25 @@ function wrapParagraph(paragraphXml: string, id: number): string {
   return paragraphXml.slice(0, insertAt) + start + paragraphXml.slice(insertAt, closeIdx) + endRef + paragraphXml.slice(closeIdx);
 }
 
-function buildCommentsXml(items: { id: number; annotation: Annotation }[]): string {
-  const body = items
-    .map(({ id, annotation }) => {
-      const text = annotation.comment.trim() || '(highlight)';
-      return (
-        `<w:comment w:id="${id}" w:author="Reviewer" w:date="2024-01-01T00:00:00Z" w:initials="R">` +
-        `<w:p><w:r><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p></w:comment>`
-      );
-    })
-    .join('');
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:comments xmlns:w="${W_NS}">${body}</w:comments>`;
+function commentElement(id: number, annotation: Annotation): string {
+  const text = annotation.comment.trim() || '(highlight)';
+  return (
+    `<w:comment w:id="${id}" w:author="Reviewer" w:date="2024-01-01T00:00:00Z" w:initials="R">` +
+    `<w:p><w:r><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p></w:comment>`
+  );
+}
+
+function highestCommentId(commentsXml: string): number {
+  const ids = [...commentsXml.matchAll(/<w:comment\b[^>]*\sw:id="(\d+)"/g)].map((m) => parseInt(m[1], 10));
+  return ids.length ? Math.max(...ids) : -1;
 }
 
 /**
  * Produce a NEW .docx (the source is never mutated) with the annotations injected as real Word
- * comments. Anchoring is at PARAGRAPH granularity: a comment is attached to the first paragraph
- * whose joined text contains the quote (robust to runs split across <w:r>). Paragraphs with no
- * confident match are returned in `unmatched` and skipped — never mis-placed.
+ * comments. Anchoring is at PARAGRAPH granularity (robust to runs split across <w:r>); paragraphs
+ * with no confident match are returned in `unmatched` and skipped. Existing comments in the source
+ * are preserved: new comment w:ids continue past the highest existing id and new <w:comment>
+ * elements are merged into the existing comments part rather than overwriting it.
  */
 export async function buildAnnotatedDocx(buf: ArrayBuffer, annotations: Annotation[]): Promise<AnnotatedDocxResult> {
   const zip = await JSZip.loadAsync(buf);
@@ -79,9 +85,11 @@ export async function buildAnnotatedDocx(buf: ArrayBuffer, annotations: Annotati
   if (!docFile) throw new Error('Not a Word document (missing word/document.xml).');
   let documentXml = await docFile.async('string');
 
+  const existingComments = await zip.file('word/comments.xml')?.async('string');
+  let nextId = existingComments ? highestCommentId(existingComments) + 1 : 0;
+
   const matched: { id: number; annotation: Annotation }[] = [];
   const unmatched: Annotation[] = [];
-  let nextId = 0;
 
   for (const annotation of annotations) {
     const needle = normalize(annotation.quote);
@@ -95,8 +103,7 @@ export async function buildAnnotatedDocx(buf: ArrayBuffer, annotations: Annotati
       continue;
     }
     const id = nextId++;
-    const wrapped = wrapParagraph(para.xml, id);
-    documentXml = documentXml.slice(0, para.start) + wrapped + documentXml.slice(para.end);
+    documentXml = documentXml.slice(0, para.start) + wrapParagraph(para.xml, id) + documentXml.slice(para.end);
     matched.push({ id, annotation });
   }
 
@@ -105,7 +112,14 @@ export async function buildAnnotatedDocx(buf: ArrayBuffer, annotations: Annotati
   }
 
   zip.file('word/document.xml', documentXml);
-  zip.file('word/comments.xml', buildCommentsXml(matched));
+
+  const newElements = matched.map(({ id, annotation }) => commentElement(id, annotation)).join('');
+  if (existingComments) {
+    // Merge: append new <w:comment> before the closing tag, keeping the authors' originals.
+    zip.file('word/comments.xml', existingComments.replace('</w:comments>', `${newElements}</w:comments>`));
+  } else {
+    zip.file('word/comments.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:comments xmlns:w="${W_NS}">${newElements}</w:comments>`);
+  }
 
   const ctFile = zip.file('[Content_Types].xml');
   if (ctFile) {
@@ -120,9 +134,8 @@ export async function buildAnnotatedDocx(buf: ArrayBuffer, annotations: Annotati
   }
 
   const relsPath = 'word/_rels/document.xml.rels';
-  const relsFile = zip.file(relsPath);
   let rels =
-    (await relsFile?.async('string')) ??
+    (await zip.file(relsPath)?.async('string')) ??
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
   if (!rels.includes('comments.xml')) {
     rels = rels.replace(

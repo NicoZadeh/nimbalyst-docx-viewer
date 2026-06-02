@@ -59,6 +59,13 @@ export function useDocxDocument(): UseDocxDocumentResult {
     waiters.forEach((w) => w.resolve());
   }, []);
 
+  const failReady = useCallback((message: string) => {
+    isReadyRef.current = false;
+    const waiters = waitersRef.current;
+    waitersRef.current = [];
+    waiters.forEach((w) => w.reject(new Error(message)));
+  }, []);
+
   const render = useCallback(
     async (buf: ArrayBuffer, opts: RenderOptions = {}) => {
       const gen = ++genRef.current; // bump on every load
@@ -71,7 +78,10 @@ export function useDocxDocument(): UseDocxDocumentResult {
       style.replaceChildren();
 
       if (buf.byteLength > MAX_RENDER_BYTES) {
-        if (gen === genRef.current) setStatus('too-large');
+        if (gen === genRef.current) {
+          setStatus('too-large');
+          failReady('Document is too large to render.');
+        }
         return;
       }
 
@@ -89,9 +99,10 @@ export function useDocxDocument(): UseDocxDocumentResult {
       } catch {
         if (gen !== genRef.current) return;
         setStatus('error');
+        failReady('Document could not be rendered.');
       }
     },
-    [flushReady],
+    [flushReady, failReady],
   );
 
   const whenRenderReady = useCallback((): Promise<void> => {

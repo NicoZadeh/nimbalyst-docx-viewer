@@ -45,6 +45,28 @@ describe('buildAnnotatedDocx', () => {
     expect(res.matched).toBe(1);
   });
 
+  it('preserves existing Word comments (no overwrite, no duplicate w:id)', async () => {
+    // samples/demo-links.docx ships with an existing comment at w:id="0".
+    const docPath = join(here, '..', 'samples', 'demo-links.docx');
+    const b = readFileSync(docPath);
+    const src = b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
+    const res = await buildAnnotatedDocx(src, [ann('Safe external link', 'my new note')]);
+    expect(res.matched).toBe(1);
+
+    const zip = await JSZip.loadAsync(res.bytes);
+    const comments = await zip.file('word/comments.xml')!.async('string');
+    // Original comment preserved AND the new one added.
+    expect(comments).toContain('should NOT be rendered');
+    expect(comments).toContain('my new note');
+    const doc = await zip.file('word/document.xml')!.async('string');
+    // Exactly one original id=0 range start (we did not duplicate it) and a fresh id=1.
+    expect((doc.match(/w:commentRangeStart w:id="0"/g) ?? []).length).toBe(1);
+    expect(doc).toContain('w:commentRangeStart w:id="1"');
+    // Body still intact.
+    const text = await extractText(toArrayBuffer(res.bytes));
+    expect(text).toContain('Safe external link');
+  });
+
   it('reports unmatched annotations and still returns a valid zip', async () => {
     const res = await buildAnnotatedDocx(fixture('sample.docx'), [ann('this text is not in the document at all', 'x')]);
     expect(res.matched).toBe(0);

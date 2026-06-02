@@ -1,5 +1,6 @@
 import mammoth from 'mammoth';
 import { runMammoth } from '../ai/mammothInput';
+import { withTimeout, MAX_EXTRACT_BYTES, EXTRACT_TIMEOUT_MS } from '../ai/extractText';
 import { decodeXmlEntities } from '../util/xml';
 
 function stripTags(s: string): string {
@@ -33,8 +34,18 @@ export function htmlToMarkdown(html: string): string {
   return s.replace(/\n{3,}/g, '\n\n').trim();
 }
 
-/** Convert a whole .docx to Markdown via Mammoth's HTML, then htmlToMarkdown. */
-export async function docToMarkdown(buf: ArrayBuffer): Promise<string> {
-  const html = await runMammoth(buf, (input) => mammoth.convertToHtml(input).then((r) => r.value));
+/**
+ * Convert a whole .docx to Markdown via Mammoth's HTML, then htmlToMarkdown. Byte-guard before
+ * Mammoth + best-effort timeout, matching extractText/extractOutline.
+ */
+export async function docToMarkdown(buf: ArrayBuffer, options: { maxBytes?: number; timeoutMs?: number } = {}): Promise<string> {
+  const maxBytes = options.maxBytes ?? MAX_EXTRACT_BYTES;
+  if (buf.byteLength > maxBytes) {
+    throw new Error('Document is too large to convert to Markdown.');
+  }
+  const html = await withTimeout(
+    runMammoth(buf, (input) => mammoth.convertToHtml(input).then((r) => r.value)),
+    options.timeoutMs ?? EXTRACT_TIMEOUT_MS,
+  );
   return htmlToMarkdown(html);
 }

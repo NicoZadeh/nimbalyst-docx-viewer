@@ -61,6 +61,16 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
   const [fitToWidth, setFitToWidth] = useState(savedView?.fitToWidth ?? true);
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
+  const fitToWidthRef = useRef(fitToWidth);
+  fitToWidthRef.current = fitToWidth;
+
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const showNotice = useCallback((msg: string) => {
+    setNotice(msg);
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => setNotice(null), 6000);
+  }, []);
 
   const [showNativeComments, setShowNativeComments] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -74,7 +84,9 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
   const [revision, setRevision] = useState(0);
   const [pages, setPages] = useState<{ current: number; total: number }>({ current: 1, total: 0 });
 
-  const { scrollRef, bodyRef, styleRef, status, render, whenRenderReady, getSections } = useDocxDocument();
+  const { scrollRef, bodyRef, styleRef, status, render, getSections } = useDocxDocument();
+  const statusRef = useRef(status);
+  statusRef.current = status;
   const annotations = useAnnotations(host.storage, host.filePath);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -115,14 +127,18 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
   }, []);
 
   const getSelection = useCallback(async (): Promise<string> => {
-    await whenRenderReady();
+    // Short-circuit on any non-ready state (hidden mount, too-large, error) so the AI tool gets a
+    // prompt, clear answer instead of waiting on a render that will never complete.
+    if (statusRef.current !== 'ready') {
+      throw new Error('No active selection; open the document and select text.');
+    }
     const body = bodyRef.current;
     const span = body ? getSelectionSpan(body) : null;
     if (!body || !span) {
       throw new Error('No active selection; open the document and select text.');
     }
     return bodyText(body).slice(span.start, span.end);
-  }, [whenRenderReady, bodyRef]);
+  }, [bodyRef]);
 
   const getAnnotations = useCallback(
     async (): Promise<AnnotationSummary[]> =>
@@ -136,6 +152,7 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
       bufRef.current = data;
       textCacheRef.current = null;
       outlineCacheRef.current = null;
+      setOutline([]); // invalidate the displayed outline on external file change
       setBuf(data);
     },
     onLoaded: () => {
@@ -220,21 +237,48 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
     return () => observer.disconnect();
   }, [fitToWidth, status, scrollRef, bodyRef]);
 
-  // ---- Persist view state ----
+  // ---- Restore + persist view state ----
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    // Restore synchronously on the first ready commit (before the fit-to-width effect's setScale
+    // can trigger a persist) so the saved scrollTop is never clobbered to 0.
+    if (status === 'ready' && !restoredRef.current) {
+      restoredRef.current = true;
+      if (savedView?.scrollTop && scrollRef.current) scrollRef.current.scrollTop = savedView.scrollTop;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
   useEffect(() => {
     void host.storage.setGlobal<ViewState>(viewKey, {
       scale,
       fitToWidth,
-      scrollTop: scrollRef.current?.scrollTop ?? 0,
+      scrollTop: scrollRef.current?.scrollTop ?? savedView?.scrollTop ?? 0,
     });
-  }, [scale, fitToWidth, host.storage, viewKey, scrollRef]);
-
-  useEffect(() => {
-    if (status === 'ready' && savedView?.scrollTop) {
-      requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: savedView.scrollTop }));
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  }, [scale, fitToWidth, viewKey]);
+
+  // Persist scroll position from an actual (debounced) scroll listener.
+  useEffect(() => {
+    const scroll = scrollRef.current;
+    if (!scroll) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        void host.storage.setGlobal<ViewState>(viewKey, {
+          scale: scaleRef.current,
+          fitToWidth: fitToWidthRef.current,
+          scrollTop: scroll.scrollTop,
+        });
+      }, 300);
+    };
+    scroll.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      scroll.removeEventListener('scroll', onScroll);
+      if (timer) clearTimeout(timer);
+    };
+  }, [scrollRef, host.storage, viewKey]);
 
   // ---- Page tracking (rendered pages, approximate) ----
   useEffect(() => {
@@ -360,29 +404,55 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
   const onCopyMarkdown = useCallback(async () => {
     const current = bufRef.current;
     if (!current) return;
+    let markdown: string;
     try {
-      await copyToClipboard(await docToMarkdown(current));
-      host.setEditorContext(null);
+      markdown = await docToMarkdown(current);
+    } catch (e) {
+      showNotice(`Could not convert document: ${e instanceof Error ? e.message : String(e)}`);
+      return;
+    }
+    try {
+      await copyToClipboard(markdown);
+      showNotice('Copied document as Markdown.');
     } catch {
       /* clipboard unavailable: no-op */
     }
-  }, [host]);
+  }, [showNotice]);
 
   const onExportComments = useCallback(async () => {
     const current = bufRef.current;
-    if (!current || annotations.annotations.length === 0) return;
-    const result = await buildAnnotatedDocx(current, annotations.annotations);
-    const base = host.fileName.replace(/\.docx$/i, '');
-    download(`${base}-commented.docx`, result.bytes, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-  }, [annotations.annotations, host.fileName]);
+    const total = annotations.annotations.length;
+    if (!current || total === 0) return;
+    try {
+      const result = await buildAnnotatedDocx(current, annotations.annotations);
+      const base = host.fileName.replace(/\.docx$/i, '');
+      download(`${base}-commented.docx`, result.bytes, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      showNotice(
+        result.unmatched.length
+          ? `Exported ${result.matched} of ${total} comments; ${result.unmatched.length} could not be located in the document.`
+          : `Exported ${result.matched} comment${result.matched === 1 ? '' : 's'} to Word.`,
+      );
+    } catch (e) {
+      showNotice(`Export failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }, [annotations.annotations, host.fileName, showNotice]);
 
   const onJumpHeading = useCallback(
     (item: OutlineItem) => {
       const body = bodyRef.current;
       if (!body) return;
-      const el = Array.from(body.querySelectorAll('p, h1, h2, h3, h4, h5, h6')).find(
-        (n) => (n.textContent ?? '').trim() === item.text.trim(),
-      );
+      // docx-preview renders headings as styled <p> with possibly different whitespace/numbering
+      // than Mammoth's heading text, so match leniently rather than by strict equality.
+      const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+      const want = norm(item.text);
+      if (!want) return;
+      const els = Array.from(body.querySelectorAll('p, h1, h2, h3, h4, h5, h6'));
+      const el =
+        els.find((n) => norm(n.textContent ?? '') === want) ??
+        els.find((n) => {
+          const t = norm(n.textContent ?? '');
+          return t.length > 3 && (t.startsWith(want) || want.startsWith(t) || t.includes(want));
+        });
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     },
     [bodyRef],
@@ -430,6 +500,11 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
         onCopyMarkdown={onCopyMarkdown}
         onExportComments={onExportComments}
       />
+      {notice && (
+        <div className="nim-docx-notice" role="status">
+          {notice}
+        </div>
+      )}
       {searchOpen && (
         <SearchBar
           query={query}
@@ -453,7 +528,7 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
           <div className="nim-docx-message nim-docx-message-error">Could not load this document. {error.message}</div>
         ) : (
           <DocxScrollView scrollRef={scrollRef} bodyRef={bodyRef} styleRef={styleRef} status={status} scale={scale} onMouseUp={onMouseUp}>
-            <HighlightLayer bodyRef={bodyRef} scrollRef={scrollRef} items={highlightItems} revision={revision + scale} ready={showLayer} />
+            <HighlightLayer bodyRef={bodyRef} scrollRef={scrollRef} items={highlightItems} revision={revision} scale={scale} ready={showLayer} />
             {selection && (
               <SelectionToolbar
                 x={selection.x}
