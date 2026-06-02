@@ -256,4 +256,95 @@ write_docx(
     },
 )
 
+# ----------------------------------------------------------- headings.docx
+# Heading 1/2/3 styled paragraphs so mammoth's default style map yields h1-h3.
+# Ships a styles.xml mapping styleId HeadingN -> name "heading n" (required).
+headings_styles = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    f'<w:styles xmlns:w="{W_NS}">'
+    '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/></w:style>'
+    '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/></w:style>'
+    '<w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/></w:style>'
+    "</w:styles>"
+)
+headings_body = (
+    para("Introduction", "Heading1")
+    + para("Some introductory text under the first heading.")
+    + para("Background", "Heading2")
+    + para("Background detail paragraph.")
+    + para("Method", "Heading2")
+    + para("Deep Dive", "Heading3")
+    + para("Details under the deep dive subsection.")
+)
+write_docx(
+    "test/fixtures/headings.docx",
+    {
+        "[Content_Types].xml": content_types(
+            extra_overrides=(
+                '<Override PartName="/word/styles.xml" '
+                'ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
+            )
+        ),
+        "_rels/.rels": ROOT_RELS,
+        "word/document.xml": document_xml(headings_body),
+        "word/styles.xml": headings_styles,
+        "word/_rels/document.xml.rels": doc_rels(
+            f'<Relationship Id="rIdStyles" Type="{R_NS}/styles" Target="styles.xml"/>'
+        ),
+    },
+)
+
+# --------------------------------------------------------------- meta.docx
+# Known docProps/core.xml + app.xml for the metadata extractor test.
+CORE_NS = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+core_xml = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    f'<cp:coreProperties xmlns:cp="{CORE_NS}" '
+    'xmlns:dc="http://purl.org/dc/elements/1.1/" '
+    'xmlns:dcterms="http://purl.org/dc/terms/" '
+    'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+    "<dc:title>Quarterly Report</dc:title>"
+    "<dc:creator>Nico Zadeh</dc:creator>"
+    "<cp:lastModifiedBy>Nico Zadeh</cp:lastModifiedBy>"
+    "<dc:subject>Finance</dc:subject>"
+    "<cp:keywords>q3, finance, report</cp:keywords>"
+    '<dcterms:created xsi:type="dcterms:W3CDTF">2024-01-15T10:00:00Z</dcterms:created>'
+    '<dcterms:modified xsi:type="dcterms:W3CDTF">2024-02-20T14:30:00Z</dcterms:modified>'
+    "</cp:coreProperties>"
+)
+app_xml = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">'
+    "<Application>Microsoft Office Word</Application>"
+    "<Words>1234</Words><Characters>6789</Characters><Pages>5</Pages>"
+    "</Properties>"
+)
+meta_rels = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    f'<Relationship Id="rId1" Type="{R_NS}/officeDocument" Target="word/document.xml"/>'
+    f'<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+    f'<Relationship Id="rId3" Type="{R_NS}/extended-properties" Target="docProps/app.xml"/>'
+    "</Relationships>"
+)
+write_docx(
+    "test/fixtures/meta.docx",
+    {
+        "[Content_Types].xml": content_types(
+            extra_overrides=(
+                '<Override PartName="/docProps/core.xml" '
+                'ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
+                '<Override PartName="/docProps/app.xml" '
+                'ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>'
+            )
+        ),
+        "_rels/.rels": meta_rels,
+        "word/document.xml": document_xml(
+            para("Quarterly Report", "Heading1") + para("Body text for the metadata fixture.")
+        ),
+        "docProps/core.xml": core_xml,
+        "docProps/app.xml": app_xml,
+    },
+)
+
 print("done")

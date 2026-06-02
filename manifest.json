@@ -1,7 +1,7 @@
 {
   "id": "com.nimbalyst.docx-viewer",
   "name": "DOCX Viewer",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "View and read Word .docx documents in Nimbalyst",
   "author": "NicoZadeh",
   "main": "dist/index.js",
@@ -18,7 +18,7 @@
         "supportsSourceMode": false
       }
     ],
-    "aiTools": ["docx.get_text"],
+    "aiTools": ["docx.get_text", "docx.get_outline", "docx.get_metadata", "docx.get_selection", "docx.get_annotations"],
     "fileIcons": { "*.docx": "description" }
   },
   "marketplace": {

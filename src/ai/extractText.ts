@@ -1,4 +1,5 @@
 import mammoth from 'mammoth';
+import { runMammoth } from './mammothInput';
 
 /** Soft/hard cap for extraction. The byteLength guard is the real protection; see EXTRACT_TIMEOUT_MS. */
 export const MAX_EXTRACT_BYTES = 25 * 1024 * 1024;
@@ -33,31 +34,6 @@ export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-// Mammoth's Node build (unit tests) accepts { buffer }; its browser build (bundled into the
-// renderer) accepts { arrayBuffer }. We can't know which build the bundler/runtime resolved,
-// so we try the environment-appropriate form first and fall back on the "wrong input" error.
-async function runMammoth(buf: ArrayBuffer): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const NodeBuffer: any = (globalThis as any).Buffer;
-  const attempts = NodeBuffer
-    ? [{ buffer: NodeBuffer.from(buf) }, { arrayBuffer: buf }]
-    : [{ arrayBuffer: buf }];
-  let lastError: unknown;
-  for (const input of attempts) {
-    try {
-      const result = await mammoth.extractRawText(input);
-      return result.value;
-    } catch (error) {
-      lastError = error;
-      if (error instanceof Error && /Could not find file in options/.test(error.message)) {
-        continue; // wrong input form for the resolved build; try the next
-      }
-      throw error;
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
-}
-
 /**
  * Extract the full plain text of a .docx via Mammoth's extractRawText. The byteLength guard
  * runs BEFORE Mammoth so pathological inputs fail fast.
@@ -67,5 +43,8 @@ export async function extractText(buf: ArrayBuffer, options: ExtractOptions = {}
   if (buf.byteLength > maxBytes) {
     throw new Error('Document is too large to extract text.');
   }
-  return withTimeout(runMammoth(buf), options.timeoutMs ?? EXTRACT_TIMEOUT_MS);
+  return withTimeout(
+    runMammoth(buf, (input) => mammoth.extractRawText(input).then((r) => r.value)),
+    options.timeoutMs ?? EXTRACT_TIMEOUT_MS,
+  );
 }

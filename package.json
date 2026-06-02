@@ -1,6 +1,6 @@
 {
   "name": "nimbalyst-docx-viewer",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "View and read Word .docx documents in Nimbalyst",
   "type": "module",
   "private": true,
@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "docx-preview": "0.3.5",
+    "jszip": "3.10.1",
     "mammoth": "1.9.0"
   },
   "peerDependencies": {
