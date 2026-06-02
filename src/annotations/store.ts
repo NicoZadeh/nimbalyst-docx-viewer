@@ -59,6 +59,11 @@ export class AnnotationStore {
     return this.storage.setGlobal(keyFor(this.filePath), next);
   }
 
+  /** Persist a full annotation array (used for optimistic UI updates). */
+  setAll(next: Annotation[]): Promise<void> {
+    return this.save(next);
+  }
+
   async add(annotation: Annotation): Promise<Annotation[]> {
     const next = [...this.list(), annotation];
     await this.save(next);

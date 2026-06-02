@@ -37,6 +37,12 @@ function bodyText(body: HTMLElement | null): string {
   return body?.textContent ?? '';
 }
 
+/** A one-line preview of captured text for the chat context chip. */
+function snippet(text: string, max = 60): string {
+  const s = text.replace(/\s+/g, ' ').trim();
+  return s.length > max ? `${s.slice(0, max)}…` : s;
+}
+
 function download(name: string, bytes: Uint8Array, mime: string): void {
   const blob = new Blob([bytes as BlobPart], { type: mime });
   const url = URL.createObjectURL(blob);
@@ -475,7 +481,7 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
 
   const copyAnnotation = useCallback((a: Annotation) => void copyToClipboard(annotationToText(a)), []);
   const sendAnnotation = useCallback(
-    (a: Annotation) => sendTextToAgent('DOCX comment', annotationToText(a)),
+    (a: Annotation) => sendTextToAgent(`DOCX: "${snippet(a.quote)}"`, annotationToText(a)),
     [sendTextToAgent],
   );
 
@@ -546,7 +552,8 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
                   setSelection(null);
                 }}
                 onAsk={() => {
-                  sendTextToAgent('DOCX selection', selectionText(selection.span));
+                  const text = selectionText(selection.span);
+                  sendTextToAgent(`DOCX: "${snippet(text)}"`, text);
                   setSelection(null);
                 }}
               />
@@ -555,7 +562,15 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
               <CommentComposer
                 x={composing.x}
                 y={composing.y}
-                onSave={(text) => void addHighlight(composing.span, 'yellow', text)}
+                onSave={(text) => {
+                  if (!text.trim()) {
+                    // Nothing typed: don't create an empty annotation.
+                    setComposing(null);
+                    window.getSelection()?.removeAllRanges();
+                    return;
+                  }
+                  void addHighlight(composing.span, 'yellow', text);
+                }}
                 onCancel={() => {
                   setComposing(null);
                   window.getSelection()?.removeAllRanges();
@@ -575,7 +590,12 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
             onCopy={copyAnnotation}
             onSend={sendAnnotation}
             onCopyAll={() => void copyToClipboard(annotationsToMarkdown(annotations.annotations))}
-            onSendAll={() => sendTextToAgent('DOCX comments', annotationsToMarkdown(annotations.annotations))}
+            onSendAll={() =>
+              sendTextToAgent(
+                `DOCX: ${annotations.annotations.length} highlight${annotations.annotations.length === 1 ? '' : 's'}`,
+                annotationsToMarkdown(annotations.annotations),
+              )
+            }
             onExportMarkdown={() => {
               const md = annotationsToMarkdown(annotations.annotations);
               download(`${host.fileName.replace(/\.docx$/i, '')}-comments.md`, new TextEncoder().encode(md), 'text/markdown');

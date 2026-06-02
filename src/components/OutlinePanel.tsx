@@ -1,3 +1,4 @@
+import { MaterialSymbol } from '@nimbalyst/extension-sdk';
 import type { OutlineItem } from '../ai/extractOutline';
 
 interface OutlinePanelProps {
@@ -12,8 +13,8 @@ export function OutlinePanel({ items, loading, onJump, onClose }: OutlinePanelPr
     <div className="nim-docx-panel nim-docx-outline">
       <div className="nim-docx-panel-head">
         <span>Outline</span>
-        <button type="button" className="nim-docx-btn nim-docx-mini" onClick={onClose} aria-label="Close outline">
-          ✕
+        <button type="button" className="nim-docx-btn nim-docx-icon" onClick={onClose} aria-label="Close outline">
+          <MaterialSymbol icon="close" size={16} />
         </button>
       </div>
       {loading ? (

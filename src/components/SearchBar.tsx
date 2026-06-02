@@ -1,3 +1,5 @@
+import { MaterialSymbol } from '@nimbalyst/extension-sdk';
+
 interface SearchBarProps {
   query: string;
   count: number;
@@ -29,9 +31,15 @@ export function SearchBar({ query, count, active, onChange, onNext, onPrev, onCl
         }}
       />
       <span className="nim-docx-search-count">{count ? `${active + 1} / ${count}` : '0 / 0'}</span>
-      <button type="button" className="nim-docx-btn nim-docx-mini" onClick={onPrev} disabled={!count} aria-label="Previous match">↑</button>
-      <button type="button" className="nim-docx-btn nim-docx-mini" onClick={onNext} disabled={!count} aria-label="Next match">↓</button>
-      <button type="button" className="nim-docx-btn nim-docx-mini" onClick={onClose} aria-label="Close search">✕</button>
+      <button type="button" className="nim-docx-btn nim-docx-icon" onClick={onPrev} disabled={!count} aria-label="Previous match">
+        <MaterialSymbol icon="keyboard_arrow_up" size={16} />
+      </button>
+      <button type="button" className="nim-docx-btn nim-docx-icon" onClick={onNext} disabled={!count} aria-label="Next match">
+        <MaterialSymbol icon="keyboard_arrow_down" size={16} />
+      </button>
+      <button type="button" className="nim-docx-btn nim-docx-icon" onClick={onClose} aria-label="Close search">
+        <MaterialSymbol icon="close" size={16} />
+      </button>
     </div>
   );
 }

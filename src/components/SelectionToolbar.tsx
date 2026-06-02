@@ -1,3 +1,4 @@
+import { MaterialSymbol } from '@nimbalyst/extension-sdk';
 import { HIGHLIGHT_COLORS, type HighlightColor } from '../annotations/store';
 
 interface SelectionToolbarProps {
@@ -36,12 +37,15 @@ export function SelectionToolbar({ x, y, onHighlight, onComment, onCopy, onAsk }
         />
       ))}
       <button type="button" className="nim-docx-btn nim-docx-mini" onClick={onComment} title="Highlight and add a comment">
+        <MaterialSymbol icon="add_comment" size={15} />
         Comment
       </button>
       <button type="button" className="nim-docx-btn nim-docx-mini" onClick={onCopy} title="Copy selection">
+        <MaterialSymbol icon="content_copy" size={15} />
         Copy
       </button>
       <button type="button" className="nim-docx-btn nim-docx-mini" onClick={onAsk} title="Send selection to the assistant">
+        <MaterialSymbol icon="auto_awesome" size={15} />
         Ask AI
       </button>
     </div>

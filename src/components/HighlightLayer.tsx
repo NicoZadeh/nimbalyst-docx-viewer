@@ -21,13 +21,15 @@ interface HighlightLayerProps {
   ready: boolean;
 }
 
+// Solid pastels; the overlay uses mix-blend-mode:multiply so these tint the white page while
+// leaving the (black) text crisp — a real highlighter look that stays readable.
 const KIND_COLOR: Record<HighlightKind, string> = {
-  yellow: 'rgba(255, 224, 102, 0.45)',
-  green: 'rgba(134, 239, 172, 0.5)',
-  pink: 'rgba(249, 168, 212, 0.5)',
-  blue: 'rgba(147, 197, 253, 0.5)',
-  search: 'rgba(250, 204, 21, 0.4)',
-  'search-active': 'rgba(251, 146, 60, 0.75)',
+  yellow: '#ffe35c',
+  green: '#a5e29a',
+  pink: '#f7a8cf',
+  blue: '#8ec5f6',
+  search: '#ffe082',
+  'search-active': '#ffb300',
 };
 
 interface PaintedRect {

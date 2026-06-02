@@ -1,3 +1,4 @@
+import { MaterialSymbol } from '@nimbalyst/extension-sdk';
 import type { Annotation } from '../annotations/store';
 
 interface CommentsPanelProps {
@@ -33,8 +34,8 @@ export function CommentsPanel({
     <div className="nim-docx-panel nim-docx-comments">
       <div className="nim-docx-panel-head">
         <span>Comments ({annotations.length})</span>
-        <button type="button" className="nim-docx-btn nim-docx-mini" onClick={onClose} aria-label="Close comments">
-          ✕
+        <button type="button" className="nim-docx-btn nim-docx-icon" onClick={onClose} aria-label="Close comments">
+          <MaterialSymbol icon="close" size={16} />
         </button>
       </div>
 

@@ -1,3 +1,5 @@
+import { MaterialSymbol } from '@nimbalyst/extension-sdk';
+
 interface PageNavProps {
   current: number;
   total: number;
@@ -13,12 +15,12 @@ export function PageNav({ current, total, onPrev, onNext }: PageNavProps) {
   if (total <= 1) return null;
   return (
     <div className="nim-docx-pagenav">
-      <button type="button" className="nim-docx-btn nim-docx-mini" onClick={onPrev} disabled={current <= 1} aria-label="Previous page">
-        ‹
+      <button type="button" className="nim-docx-btn nim-docx-icon" onClick={onPrev} disabled={current <= 1} aria-label="Previous page">
+        <MaterialSymbol icon="chevron_left" size={16} />
       </button>
       <span className="nim-docx-pagelabel">Page {current} / {total} (approx.)</span>
-      <button type="button" className="nim-docx-btn nim-docx-mini" onClick={onNext} disabled={current >= total} aria-label="Next page">
-        ›
+      <button type="button" className="nim-docx-btn nim-docx-icon" onClick={onNext} disabled={current >= total} aria-label="Next page">
+        <MaterialSymbol icon="chevron_right" size={16} />
       </button>
     </div>
   );

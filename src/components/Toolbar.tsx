@@ -1,3 +1,5 @@
+import { MaterialSymbol } from '@nimbalyst/extension-sdk';
+
 interface ToolbarProps {
   scale: number;
   fitToWidth: boolean;
@@ -29,44 +31,51 @@ export function Toolbar(props: ToolbarProps) {
         onClick={props.onFitToWidthToggle}
         title="Fit to width (Cmd/Ctrl+0)"
       >
+        <MaterialSymbol icon="fit_screen" size={16} />
         Fit width
       </button>
       <div className="nim-docx-zoomgroup">
-        <button type="button" className="nim-docx-btn" onClick={props.onZoomOut} disabled={!props.canZoomOut} title="Zoom out (Cmd/Ctrl+-)" aria-label="Zoom out">
-          &#8722;
+        <button type="button" className="nim-docx-btn nim-docx-icon" onClick={props.onZoomOut} disabled={!props.canZoomOut} title="Zoom out (Cmd/Ctrl+-)" aria-label="Zoom out">
+          <MaterialSymbol icon="remove" size={16} />
         </button>
         <button type="button" className="nim-docx-btn nim-docx-zoom" onClick={props.onZoomReset} title="Reset zoom to 100%">
           {percent}%
         </button>
-        <button type="button" className="nim-docx-btn" onClick={props.onZoomIn} disabled={!props.canZoomIn} title="Zoom in (Cmd/Ctrl++)" aria-label="Zoom in">
-          +
+        <button type="button" className="nim-docx-btn nim-docx-icon" onClick={props.onZoomIn} disabled={!props.canZoomIn} title="Zoom in (Cmd/Ctrl++)" aria-label="Zoom in">
+          <MaterialSymbol icon="add" size={16} />
         </button>
       </div>
 
       <div className="nim-docx-toolbar-spacer" />
 
       <button type="button" className="nim-docx-btn" onClick={props.onToggleSearch} title="Find in document (Cmd/Ctrl+F)">
+        <MaterialSymbol icon="search" size={16} />
         Find
       </button>
-      <button type="button" className={props.outlineOpen ? 'nim-docx-btn is-active' : 'nim-docx-btn'} onClick={props.onToggleOutline} title="Outline">
+      <button type="button" className={props.outlineOpen ? 'nim-docx-btn is-active' : 'nim-docx-btn'} onClick={props.onToggleOutline} title="Document outline">
+        <MaterialSymbol icon="format_list_bulleted" size={16} />
         Outline
       </button>
-      <button type="button" className={props.commentsOpen ? 'nim-docx-btn is-active' : 'nim-docx-btn'} onClick={props.onToggleComments} title="Comments">
+      <button type="button" className={props.commentsOpen ? 'nim-docx-btn is-active' : 'nim-docx-btn'} onClick={props.onToggleComments} title="Your highlights and comments">
+        <MaterialSymbol icon="chat_bubble" size={16} />
         Comments{props.annotationCount > 0 ? ` (${props.annotationCount})` : ''}
       </button>
       <button
         type="button"
         className={props.showNativeComments ? 'nim-docx-btn is-active' : 'nim-docx-btn'}
         onClick={props.onToggleNativeComments}
-        title="Show the document's own Word comments and tracked changes (read-only)"
+        title="Show the document's own Word comments and tracked changes (read-only). Off by default."
       >
-        Word marks
+        <MaterialSymbol icon="rate_review" size={16} />
+        Markup
       </button>
-      <button type="button" className="nim-docx-btn" onClick={props.onCopyMarkdown} title="Copy the document as Markdown">
+      <button type="button" className="nim-docx-btn" onClick={props.onCopyMarkdown} title="Copy the whole document as Markdown">
+        <MaterialSymbol icon="content_copy" size={16} />
         Copy MD
       </button>
-      <button type="button" className="nim-docx-btn" onClick={props.onExportComments} title="Export a .docx with your comments as Word comments" disabled={props.annotationCount === 0}>
-        Export comments
+      <button type="button" className="nim-docx-btn" onClick={props.onExportComments} title="Download a .docx with your comments written as Word comments" disabled={props.annotationCount === 0}>
+        <MaterialSymbol icon="ios_share" size={16} />
+        Export
       </button>
     </div>
   );

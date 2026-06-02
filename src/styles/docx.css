@@ -25,6 +25,9 @@
 
 .nim-docx-btn {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   border: 1px solid var(--nim-border, #d4d4d8);
   background: var(--nim-bg-tertiary, #e4e4e7);
   color: var(--nim-text, #18181b);
@@ -33,9 +36,10 @@
   font-size: 13px;
   line-height: 1.4;
   cursor: pointer;
-  min-width: 32px;
+  white-space: nowrap;
   transition: background 0.12s ease, opacity 0.12s ease;
 }
+.nim-docx-icon { padding: 4px 6px; }
 .nim-docx-btn:hover:not(:disabled) { background: var(--nim-bg-hover, #d4d4d8); }
 .nim-docx-btn:disabled { opacity: 0.45; cursor: default; }
 .nim-docx-btn.is-active {
@@ -101,7 +105,8 @@
 
 /* Highlight overlay (annotations + search), non-interactive so selection passes through */
 .nim-docx-overlay { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 1; }
-.nim-docx-hl { position: absolute; border-radius: 2px; pointer-events: none; }
+/* multiply: the colored rect darkens toward the text under it, so black text stays crisp and only the white page is tinted. */
+.nim-docx-hl { position: absolute; border-radius: 2px; pointer-events: none; mix-blend-mode: multiply; }
 
 /* Floating selection toolbar */
 .nim-docx-seltoolbar {

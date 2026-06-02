@@ -24,10 +24,16 @@ export function useAnnotations(storage: StorageLike, filePath: string): UseAnnot
   const store = storeRef.current;
   const [annotations, setAnnotations] = useState<Annotation[]>(() => store.list());
 
+  // Updates are optimistic: React state changes synchronously and persistence (an async
+  // host.storage IPC round-trip) happens in the background, so highlights appear instantly.
   const add = useCallback(
     async (rootText: string, start: number, end: number, comment: string, color: HighlightColor) => {
       const annotation = makeAnnotation({ anchor: serializeAnchor(rootText, start, end), comment, color });
-      setAnnotations(await store.add(annotation));
+      setAnnotations((prev) => {
+        const next = [...prev, annotation];
+        void store.setAll(next);
+        return next;
+      });
       return annotation;
     },
     [store],
@@ -35,21 +41,29 @@ export function useAnnotations(storage: StorageLike, filePath: string): UseAnnot
 
   const update = useCallback(
     async (id: string, patch: Partial<Pick<Annotation, 'comment' | 'color'>>) => {
-      setAnnotations(await store.update(id, patch));
+      setAnnotations((prev) => {
+        const next = prev.map((a) => (a.id === id ? { ...a, ...patch } : a));
+        void store.setAll(next);
+        return next;
+      });
     },
     [store],
   );
 
   const remove = useCallback(
     async (id: string) => {
-      setAnnotations(await store.remove(id));
+      setAnnotations((prev) => {
+        const next = prev.filter((a) => a.id !== id);
+        void store.setAll(next);
+        return next;
+      });
     },
     [store],
   );
 
   const clear = useCallback(async () => {
-    await store.clear();
     setAnnotations([]);
+    void store.setAll([]);
   }, [store]);
 
   const resolveAll = useCallback(
