@@ -21,6 +21,7 @@ import { extractMetadata } from './ai/extractMetadata';
 import type { DocxEditorAPI, AnnotationSummary } from './ai/docxTools';
 import { findMatches } from './search/search';
 import { isZoomWheel, nextScaleFromWheel, clampScale } from './util/zoom';
+import { computePageGaps } from './util/pagination';
 import { buildAnnotatedDocx } from './export/docxComments';
 import { docToMarkdown } from './export/markdown';
 import { annotationsToMarkdown, annotationsToJSON, annotationToText } from './export/annotationsExport';
@@ -80,6 +81,7 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
   }, []);
 
   const [showNativeComments, setShowNativeComments] = useState(false);
+  const [pagesMode, setPagesMode] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeMatch, setActiveMatch] = useState(0);
@@ -318,6 +320,36 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
     [getSections],
   );
 
+  // ---- Visual page breaking (block-level spacers) ----
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body || status !== 'ready') return;
+    const sections = Array.from(body.querySelectorAll('section')) as HTMLElement[];
+    sections.forEach((s) => s.querySelectorAll('.nim-docx-page-gap').forEach((g) => g.remove()));
+    if (!pagesMode) return;
+    const s = scaleRef.current || 1;
+    sections.forEach((section) => {
+      const pageHeight = parseFloat(getComputedStyle(section).minHeight);
+      if (!(pageHeight > 0)) return;
+      const blocks = (Array.from(section.children) as HTMLElement[]).filter(
+        (c) => !c.classList.contains('nim-docx-page-gap'),
+      );
+      if (blocks.length < 2) return; // a single big block (e.g. one table) cannot be split
+      // Heights normalized to unzoomed CSS px so the math is scale-independent.
+      const heights = blocks.map((b) => b.getBoundingClientRect().height / s);
+      const gaps = computePageGaps(heights, pageHeight, 24);
+      const cs = getComputedStyle(section);
+      for (let i = gaps.length - 1; i >= 0; i -= 1) {
+        const spacer = document.createElement('div');
+        spacer.className = 'nim-docx-page-gap';
+        spacer.style.height = `${gaps[i].height}px`;
+        spacer.style.marginLeft = `-${cs.paddingLeft}`;
+        spacer.style.marginRight = `-${cs.paddingRight}`;
+        section.insertBefore(spacer, blocks[gaps[i].beforeIndex]);
+      }
+    });
+  }, [pagesMode, status, scale, bodyRef]);
+
   // ---- Search ----
   const matches = useMemo<Span[]>(() => {
     if (!searchOpen || !query.trim() || status !== 'ready') return [];
@@ -506,6 +538,8 @@ export function DocxViewerEditor({ host }: EditorHostProps) {
         annotationCount={annotations.annotations.length}
         showNativeComments={showNativeComments}
         onToggleNativeComments={() => setShowNativeComments((v) => !v)}
+        pagesMode={pagesMode}
+        onTogglePages={() => setPagesMode((v) => !v)}
         onCopyMarkdown={onCopyMarkdown}
         onExportComments={onExportComments}
       />

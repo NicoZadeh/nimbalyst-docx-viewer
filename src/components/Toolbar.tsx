@@ -17,6 +17,8 @@ interface ToolbarProps {
   annotationCount: number;
   showNativeComments: boolean;
   onToggleNativeComments: () => void;
+  pagesMode: boolean;
+  onTogglePages: () => void;
   onCopyMarkdown: () => void;
   onExportComments: () => void;
 }
@@ -68,6 +70,15 @@ export function Toolbar(props: ToolbarProps) {
       >
         <MaterialSymbol icon="rate_review" size={16} />
         Markup
+      </button>
+      <button
+        type="button"
+        className={props.pagesMode ? 'nim-docx-btn is-active' : 'nim-docx-btn'}
+        onClick={props.onTogglePages}
+        title="Show visual page breaks between pages"
+      >
+        <MaterialSymbol icon="auto_stories" size={16} />
+        Pages
       </button>
       <button type="button" className="nim-docx-btn" onClick={props.onCopyMarkdown} title="Copy the whole document as Markdown">
         <MaterialSymbol icon="content_copy" size={16} />
